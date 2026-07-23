@@ -1,35 +1,27 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-
-// Define 
-export interface User {
-  id: number;
-  name: string;
-  email: string;
-}
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { User, UserDocument } from './users.schema';
 
 @Injectable()
 export class UsersService {
-  private users: User[] = []; // array to save the temporary data
-  private idCounter = 1;
+  // Inject the User model into the service
+  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
   // POST /users
-  create(createUserDto: { name: string; email: string }): User {
-    const newUser: User = {
-      id: this.idCounter++,
-      ...createUserDto,
-    };
-    this.users.push(newUser);
-    return newUser;
+  async create(createUserDto: { name: string; email: string }): Promise<User> {
+    const newUser = new this.userModel(createUserDto);
+    return await newUser.save();
   }
 
   // GET /users
-  findAll(): User[] {
-    return this.users;
+  async findAll(): Promise<User[]> {
+    return await this.userModel.find().exec();
   }
 
   // GET /users/:id
-  findOne(id: number): User {
-    const user = this.users.find((u) => u.id === id);
+  async findOne(id: string): Promise<User> {
+    const user = await this.userModel.findById(id).exec();
     if (!user) {
       throw new NotFoundException(`User with ID ${id} does not exist.`);
     }
@@ -37,22 +29,23 @@ export class UsersService {
   }
 
   // PUT /users/:id
-  update(id: number, updateUserDto: { name?: string; email?: string }): User {
-    const user = this.findOne(id);
+  async update(id: string, updateUserDto: { name?: string; email?: string }): Promise<User> {
+    const updatedUser = await this.userModel
+      .findByIdAndUpdate(id, updateUserDto, { new: true })
+      .exec();
     
-    if (updateUserDto.name) user.name = updateUserDto.name;
-    if (updateUserDto.email) user.email = updateUserDto.email;
-
-    return user;
+    if (!updatedUser) {
+      throw new NotFoundException(`User with ID ${id} does not exist.`);
+    }
+    return updatedUser;
   }
 
   // DELETE /users/:id
-  remove(id: number): { message: string } {
-    const index = this.users.findIndex((u) => u.id === id);
-    if (index === -1) {
+  async remove(id: string): Promise<{ message: string }> {
+    const result = await this.userModel.findByIdAndDelete(id).exec();
+    if (!result) {
       throw new NotFoundException(`User with ID ${id} does not exist.`);
     }
-    this.users.splice(index, 1);
     return { message: `Successfully deleted user with ID ${id}` };
   }
 }
