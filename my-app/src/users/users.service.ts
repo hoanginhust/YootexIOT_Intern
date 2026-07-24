@@ -10,7 +10,9 @@ export class UsersService {
 
   // POST /users
   async create(createUserDto: { name: string; email: string }): Promise<User> {
-    const newUser = new this.userModel(createUserDto);
+    // count the total number of users to assign a unique userId
+    const totalUsers = await this.userModel.countDocuments().exec();
+    const newUser = new this.userModel({ ...createUserDto, userId: totalUsers + 1 });
     return await newUser.save();
   }
 
@@ -21,7 +23,7 @@ export class UsersService {
 
   // GET /users/:id
   async findOne(id: string): Promise<User> {
-    const user = await this.userModel.findById(id).exec();
+    const user = await this.userModel.findOne({ userId: Number(id) }).exec();
     if (!user) {
       throw new NotFoundException(`User with ID ${id} does not exist.`);
     }
@@ -31,7 +33,7 @@ export class UsersService {
   // PUT /users/:id
   async update(id: string, updateUserDto: { name?: string; email?: string }): Promise<User> {
     const updatedUser = await this.userModel
-      .findByIdAndUpdate(id, updateUserDto, { new: true })
+      .findOneAndUpdate({ userId: Number(id) }, updateUserDto, { returnDocument: 'after' })
       .exec();
     
     if (!updatedUser) {
@@ -42,7 +44,7 @@ export class UsersService {
 
   // DELETE /users/:id
   async remove(id: string): Promise<{ message: string }> {
-    const result = await this.userModel.findByIdAndDelete(id).exec();
+    const result = await this.userModel.findOneAndDelete({ userId: Number(id) }).exec();
     if (!result) {
       throw new NotFoundException(`User with ID ${id} does not exist.`);
     }
