@@ -1,17 +1,23 @@
-import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common';
-import { UsersService, User } from './users.service';
+import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards } from '@nestjs/common';
+import { UsersService } from './users.service';
+import { AuthGuard } from '../auth/auth.guard';
+import { AuthService } from '../auth/auth.service';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly authService: AuthService, 
+  ) {}
 
   // POST /users
   @Post()
-  create(@Body() createUserDto: { name: string; email: string }) {
-    return this.usersService.create(createUserDto);
+  create(@Body() createUserDto: any) {
+    return this.authService.register(createUserDto);
   }
 
   // GET /users
+  @UseGuards(AuthGuard)
   @Get()
   findAll() {
     return this.usersService.findAll();
