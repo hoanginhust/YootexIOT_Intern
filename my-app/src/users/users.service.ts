@@ -5,14 +5,20 @@ import { User, UserDocument } from './users.schema';
 
 @Injectable()
 export class UsersService {
-  // Inject the User model into the service
   constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
   // POST /users
-  async create(createUserDto: { name: string; email: string }): Promise<User> {
-    // count the total number of users to assign a unique userId
-    const totalUsers = await this.userModel.countDocuments().exec();
-    const newUser = new this.userModel({ ...createUserDto, userId: totalUsers + 1 });
+  async create(createUserDto: any): Promise<User> {
+    // Find the user with the highest userId by sorting in descending order
+    const highestUser = await this.userModel.findOne().sort({ userId: -1 }).exec();
+  
+    // If database is empty, start with 1. Otherwise, increment the highest ID by 1.
+    const nextId = highestUser ? highestUser.userId + 1 : 1;
+  
+    const newUser = new this.userModel({ 
+      ...createUserDto, 
+      userId: nextId 
+    });
     return await newUser.save();
   }
 
@@ -31,15 +37,16 @@ export class UsersService {
   }
 
   // PUT /users/:id
-  async update(id: string, updateUserDto: { name?: string; email?: string }): Promise<User> {
-    const updatedUser = await this.userModel
-      .findOneAndUpdate({ userId: Number(id) }, updateUserDto, { returnDocument: 'after' })
-      .exec();
-    
-    if (!updatedUser) {
+  async update(id: string, updateUserDto: any): Promise<User> {
+    const user = await this.userModel.findOne({ userId: Number(id) }).exec();
+    if (!user) {
       throw new NotFoundException(`User with ID ${id} does not exist.`);
     }
-    return updatedUser;
+
+    if (updateUserDto.name) user.name = updateUserDto.name;
+    if (updateUserDto.email) user.email = updateUserDto.email;
+
+    return await user.save();
   }
 
   // DELETE /users/:id

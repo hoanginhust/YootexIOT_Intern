@@ -6,7 +6,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  async create(@Body() createUserDto: { name: string; email: string }) {
+  async create(@Body() createUserDto: any) {
     return await this.usersService.create(createUserDto);
   }
 
@@ -23,7 +23,7 @@ export class UsersController {
   @Put(':id')
   async update(
     @Param('id') id: string,
-    @Body() updateUserDto: { name?: string; email?: string },
+    @Body() updateUserDto: any,
   ) {
     return await this.usersService.update(id, updateUserDto);
   }

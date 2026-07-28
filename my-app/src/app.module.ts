@@ -8,7 +8,7 @@ import { LoggerMiddleware } from './logger/logger.middleware';
 
 @Module({
   imports: [
-    // Active the ConfigModule globally to access environment variables throughout the application
+    // Activate the ConfigModule globally to access environment variables throughout the application
     ConfigModule.forRoot({
       isGlobal: true, 
     }),
