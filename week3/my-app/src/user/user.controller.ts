@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards } from '@nestjs/common';
-import { UsersService } from './users.service';
+import { Controller, Get, Post, Body, Param, Patch, Delete, UseGuards } from '@nestjs/common';
+import { UsersService } from './user.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { AuthService } from '../auth/auth.service';
 
@@ -7,38 +7,35 @@ import { AuthService } from '../auth/auth.service';
 export class UsersController {
   constructor(
     private readonly usersService: UsersService,
-    private readonly authService: AuthService, 
+    private readonly authService: AuthService,
   ) {}
 
-  // POST /users
+  // Open endpoint for initial account signup registration
   @Post()
   create(@Body() createUserDto: any) {
     return this.authService.register(createUserDto);
   }
 
-  // GET /users
+  // Guarded route allowing access to list profiles schema
   @UseGuards(AuthGuard)
   @Get()
   findAll() {
     return this.usersService.findAll();
   }
 
-  // GET /users/:id
+  @UseGuards(AuthGuard)
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(+id);
   }
 
-  // PUT /users/:id
-  @Put(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateUserDto: { name?: string; email?: string },
-  ) {
+  @UseGuards(AuthGuard)
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateUserDto: any) {
     return this.usersService.update(+id, updateUserDto);
   }
 
-  // DELETE /users/:id
+  @UseGuards(AuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.usersService.remove(+id);

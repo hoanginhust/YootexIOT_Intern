@@ -1,7 +1,9 @@
 import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
@@ -10,14 +12,13 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  // New account registration API and Password encryption
-  async register(dto: any) {
+  // Register a new user with hashed password
+  async register(dto: RegisterDto) {
     const userExist = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
     if (userExist) throw new BadRequestException('Email already in use.');
 
-    // Hash the password before saving it to the database
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
     return this.prisma.user.create({
@@ -26,22 +27,20 @@ export class AuthService {
         email: dto.email,
         password: hashedPassword,
       },
-      select: { id: true, name: true, email: true }, // Hide the hashed password when returning the user
+      select: { id: true, name: true, email: true }, // Hide password
     });
   }
 
-  // API Login to obtain a JWT Token
-  async login(dto: any) {
+  // Validate credentials and sign token
+  async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
-    if (!user) throw new UnauthorizedException('Invalid email or password.');
+    if (!user) throw new UnauthorizedException('Invalid credentials.');
 
-    // Compare the plain text password with the hashed password in the database
     const isPasswordMatch = await bcrypt.compare(dto.password, user.password);
-    if (!isPasswordMatch) throw new UnauthorizedException('Invalid email or password.');
+    if (!isPasswordMatch) throw new UnauthorizedException('Invalid credentials.');
 
-    // Generate the JWT token
     const payload = { sub: user.id, email: user.email };
     return {
       access_token: await this.jwtService.signAsync(payload),

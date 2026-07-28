@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UsersController } from './users.controller';
-import { UsersService } from './users.service';
+import { UsersController } from './user.controller';
+import { UsersService } from './user.service';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -11,7 +11,7 @@ describe('UsersController', () => {
       providers: [
         {
           provide: UsersService,
-          // Provide mock functions for standard CRUD operations
+          // Mock UsersService CRUD methods
           useValue: {
             create: jest.fn(),
             findAll: jest.fn(),

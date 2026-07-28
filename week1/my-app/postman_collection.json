@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "My App - NestJS (In-Memory Array)",
-    "description": "API test suite for Week 1 hands-on project: Hello and Users CRUD operations using an in-memory array.",
+    "description": "API test suite for the hands-on project: Hello and Users CRUD operations using an in-memory array.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
