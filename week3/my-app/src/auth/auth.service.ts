@@ -12,7 +12,7 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  // Register a new user with hashed password
+  // Register a new user with default 'USER' role
   async register(dto: RegisterDto) {
     const userExist = await this.prisma.user.findUnique({
       where: { email: dto.email },
@@ -26,12 +26,13 @@ export class AuthService {
         name: dto.name,
         email: dto.email,
         password: hashedPassword,
+        role: 'USER', // Always force default role as USER for safety
       },
-      select: { id: true, name: true, email: true }, // Hide password
+      select: { id: true, name: true, email: true, role: true }, // Hide password
     });
   }
 
-  // Validate credentials and sign token
+  // Validate credentials and sign token with user id and role
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
@@ -41,7 +42,8 @@ export class AuthService {
     const isPasswordMatch = await bcrypt.compare(dto.password, user.password);
     if (!isPasswordMatch) throw new UnauthorizedException('Invalid credentials.');
 
-    const payload = { sub: user.id, email: user.email };
+    // Embed id and role into the JWT payload for authorization
+    const payload = { id: user.id, email: user.email, role: user.role };
     return {
       access_token: await this.jwtService.signAsync(payload),
     };

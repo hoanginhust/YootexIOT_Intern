@@ -67,7 +67,13 @@
                 "type": "text/javascript",
                 "exec": [
                   "const res = pm.response.json();",
-                  "if (res.access_token) { pm.collectionVariables.set('accessToken', res.access_token); }",
+                  "if (res.access_token) {",
+                  "  pm.collectionVariables.set('accessToken', res.access_token);",
+                  "  const base64Url = res.access_token.split('.')[1];",
+                  "  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');",
+                  "  const payload = JSON.parse(atob(base64));",
+                  "  if (payload.id) { pm.collectionVariables.set('userId', payload.id); }",
+                  "}",
                   "pm.test('Status 200 OK', () => pm.response.to.have.status(200));"
                 ]
               }
@@ -110,7 +116,7 @@
           }
         },
         {
-          "name": "PATCH /users/:id",
+          "name": "PATCH /users",
           "request": {
             "method": "PATCH",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -119,14 +125,14 @@
               "raw": "{\n  \"name\": \"Updated Name\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/users/{{userId}}",
+              "raw": "{{baseUrl}}/users",
               "host": ["{{baseUrl}}"],
-              "path": ["users", "{{userId}}"]
+              "path": ["users"]
             }
           }
         },
         {
-          "name": "PUT /users/:id/profile",
+          "name": "PUT /users/profile",
           "request": {
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -135,9 +141,9 @@
               "raw": "{\n  \"bio\": \"Hello world, I am a software engineering student.\",\n  \"avatar\": \"https://example.com/avatar.png\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/users/{{userId}}/profile",
+              "raw": "{{baseUrl}}/users/profile",
               "host": ["{{baseUrl}}"],
-              "path": ["users", "{{userId}}", "profile"]
+              "path": ["users", "profile"]
             }
           }
         },
@@ -185,14 +191,30 @@
         {
           "name": "GET /posts",
           "request": {
+            "auth": { "type": "noauth" },
             "method": "GET",
             "header": [],
             "url": { "raw": "{{baseUrl}}/posts", "host": ["{{baseUrl}}"], "path": ["posts"] }
           }
         },
         {
+          "name": "GET /posts/?userId",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/posts?userId={{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["posts"],
+              "query": [{ "key": "userId", "value": "{{userId}}" }]
+            }
+          }
+        },
+        {
           "name": "GET /posts/:id",
           "request": {
+            "auth": { "type": "noauth" },
             "method": "GET",
             "header": [],
             "url": {

@@ -10,7 +10,7 @@ import { JwtModule } from '@nestjs/jwt';
       secret: 'SECRET_KEY_SMART_GARDEN_IOT_SECURITY',
     }),
   ],
-  providers: [AuthService], // PrismaService is loaded via global PrismaModule
+  providers: [AuthService],
   controllers: [AuthController],
 })
 export class AuthModule {}

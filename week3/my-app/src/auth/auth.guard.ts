@@ -16,7 +16,8 @@ export class AuthGuard implements CanActivate {
       const payload = await this.jwtService.verifyAsync(token, {
         secret: 'SECRET_KEY_SMART_GARDEN_IOT_SECURITY',
       });
-      request['user'] = payload; // Attach user payload to request
+      // Attach user information (id, email, role) to the request object
+      request['user'] = payload; 
     } catch {
       throw new UnauthorizedException('Token is invalid or expired.');
     }

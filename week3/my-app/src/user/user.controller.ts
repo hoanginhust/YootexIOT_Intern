@@ -1,43 +1,36 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Body, Param, Patch, Delete, UseGuards, Request, UsePipes, ValidationPipe } from '@nestjs/common';
 import { UsersService } from './user.service';
 import { AuthGuard } from '../auth/auth.guard';
-import { AuthService } from '../auth/auth.service';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('users')
+@UseGuards(AuthGuard) // Protect all user routes by default
 export class UsersController {
-  constructor(
-    private readonly usersService: UsersService,
-    private readonly authService: AuthService,
-  ) {}
+  constructor(private readonly usersService: UsersService) {}
 
-  // Open endpoint for initial account signup registration
-  @Post()
-  create(@Body() createUserDto: any) {
-    return this.authService.register(createUserDto);
-  }
-
-  // Guarded route allowing access to list profiles schema
-  @UseGuards(AuthGuard)
+  // Protected: Only ADMIN can view the list of all users
   @Get()
-  findAll() {
-    return this.usersService.findAll();
+  findAll(@Request() req: any) {
+    return this.usersService.findAll(req.user);
   }
 
-  @UseGuards(AuthGuard)
+  // Public/Guarded: Anyone logged-in can view public details by ID
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(+id);
+  findOne(@Param('id') id: string, @Request() req: any) {
+    return this.usersService.findOne(+id, req.user);
   }
 
-  @UseGuards(AuthGuard)
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: any) {
-    return this.usersService.update(+id, updateUserDto);
+  // Self-Service: Update currently logged-in user account details
+  @Patch()
+  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
+  update(@Body() updateUserDto: UpdateUserDto, @Request() req: any) {
+    const userId = req.user.id; // Automatically extract target ID from JWT payload
+    return this.usersService.update(userId, updateUserDto);
   }
 
-  @UseGuards(AuthGuard)
+  // Action: ADMIN deletes a user, or a User requests self-deletion
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+  remove(@Param('id') id: string, @Request() req: any) {
+    return this.usersService.remove(+id, req.user);
   }
 }

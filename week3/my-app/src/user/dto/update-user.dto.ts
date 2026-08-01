@@ -1,4 +1,7 @@
+import { IsString, IsOptional } from 'class-validator';
+
 export class UpdateUserDto {
-  name?: string;
-  email?: string;
+  @IsString()
+  @IsOptional()
+  name?: string; // Target property for update operations
 }
