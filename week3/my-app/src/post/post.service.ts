@@ -7,7 +7,7 @@ import { UpdatePostDto } from './dto/update-post.dto';
 export class PostService {
   constructor(private prisma: PrismaService) {}
 
-  // Create a new post bound to a user[cite: 50]
+  // Create a new post bound to a user
   async create(userId: number, dto: CreatePostDto) {
     return this.prisma.post.create({
       data: {
@@ -38,11 +38,12 @@ export class PostService {
     return post;
   }
 
-  // Update post only if current user is ADMIN or the Owner
+  // Update post ONLY if current user is the original author (ADMIN is excluded)
   async update(id: number, dto: UpdatePostDto, currentUser: any) {
     const post = await this.findOne(id);
     
-    if (currentUser.role !== 'ADMIN' && post.userId !== currentUser.id) {
+    // Strict Ownership Check: Only the author can modify content to ensure data integrity
+    if (post.userId !== currentUser.id) {
       throw new ForbiddenException('You are not allowed to edit this post.');
     }
 
@@ -52,10 +53,11 @@ export class PostService {
     });
   }
 
-  // Delete post only if current user is ADMIN or the Owner
+  // Delete post if current user is ADMIN or the Owner
   async remove(id: number, currentUser: any) {
     const post = await this.findOne(id);
 
+    // ADMIN retains full rights to delete non-compliant or malicious posts
     if (currentUser.role !== 'ADMIN' && post.userId !== currentUser.id) {
       throw new ForbiddenException('You are not allowed to delete this post.');
     }

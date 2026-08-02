@@ -33,7 +33,6 @@ export class UsersService {
         select: {
           id: true,
           name: true,
-          role: true,
           profile: true,
           posts: true,
         },
