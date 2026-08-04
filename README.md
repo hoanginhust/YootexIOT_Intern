@@ -7,3 +7,5 @@
 ### [Week 2](./week2) - Làm việc với Database và Hoàn thiện CRUD (sử dụng MongoDB)
 
 ### [Week 3](./week3) - Làm việc với Prisma, PostgreSQL và Authentication
+
+### [Week 4](./week4) - Làm việc với Passport, Guard và Role-based Authentication
