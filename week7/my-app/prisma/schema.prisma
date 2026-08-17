@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  gardens   Garden[]
+}
+
+model Garden {
+  id         Int          @id @default(autoincrement())
+  name       String
+  ownerId    Int
+  owner      User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  vegetables Vegetable[]
+  sales      Sale[]
+  sensorData SensorData[]
+}
+
+model Vegetable {
+  id         Int              @id @default(autoincrement())
+  name       String
+  importQty  Int              @default(0)
+  soldQty    Int              @default(0)
+  gardenId   Int
+  garden     Garden           @relation(fields: [gardenId], references: [id], onDelete: Cascade)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  sales      Sale[]
+  prices     VegetablePrice[]
+}
+
+model VegetablePrice {
+  id          Int       @id @default(autoincrement())
+  price       Float
+  appliedAt   DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  vegetableId Int
+  vegetable   Vegetable @relation(fields: [vegetableId], references: [id], onDelete: Cascade)
+}
+
+model Sale {
+  id          Int       @id @default(autoincrement())
+  quantity    Int
+  totalAmount Float
+  soldAt      DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  gardenId    Int
+  vegetableId Int
+  garden      Garden    @relation(fields: [gardenId], references: [id])
+  vegetable   Vegetable @relation(fields: [vegetableId], references: [id])
+}
+
+model SensorData {
+  id          Int      @id @default(autoincrement())
+  temperature Float
+  humidity    Float
+  recordedAt  DateTime @default(now())
+  gardenId    Int
+  garden      Garden   @relation(fields: [gardenId], references: [id], onDelete: Cascade)
+}

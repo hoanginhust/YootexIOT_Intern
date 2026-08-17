@@ -1,0 +1,350 @@
+{
+  "info": {
+    "name": "Smart Garden IoT Management System",
+    "description": "Postman Collection for Smart Garden IoT System featuring Authentication, Garden Management, Vegetable Stocking, Price Tracking, Revenue Analysis, and MQTT/WebSocket IoT Telemetry.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "accessToken", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "gardenId", "value": "" },
+    { "key": "vegetableId", "value": "" },
+    { "key": "priceId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Health & Auth",
+      "item": [
+        {
+          "name": "GET /hello",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/hello", "host": ["{{baseUrl}}"], "path": ["hello"] }
+          }
+        },
+        {
+          "name": "POST /auth/register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Auto-save user ID upon successful registration",
+                  "const res = pm.response.json();",
+                  "if (res.id) { pm.collectionVariables.set('userId', res.id); }",
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Garden Admin\",\n  \"email\": \"admin@garden.com\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "POST /auth/login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Extract JWT token and decode userId to collection variables",
+                  "const res = pm.response.json();",
+                  "if (res.access_token) {",
+                  "  pm.collectionVariables.set('accessToken', res.access_token);",
+                  "  const base64Url = res.access_token.split('.')[1];",
+                  "  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');",
+                  "  const payload = JSON.parse(atob(base64));",
+                  "  if (payload.id) { pm.collectionVariables.set('userId', payload.id); }",
+                  "}",
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@garden.com\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Gardens",
+      "item": [
+        {
+          "name": "POST /gardens (Create Garden)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Auto-save gardenId for subsequent garden operations",
+                  "const res = pm.response.json();",
+                  "if (res.id) { pm.collectionVariables.set('gardenId', res.id); }",
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Greenhouse Garden A\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/gardens", "host": ["{{baseUrl}}"], "path": ["gardens"] }
+          }
+        },
+        {
+          "name": "GET /gardens (List Gardens)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/gardens", "host": ["{{baseUrl}}"], "path": ["gardens"] }
+          }
+        },
+        {
+          "name": "GET /gardens/:id (Garden Detail)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gardens/{{gardenId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["gardens", "{{gardenId}}"]
+            }
+          }
+        },
+        {
+          "name": "PUT /gardens/:id (Update Garden)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Greenhouse Garden A\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/gardens/{{gardenId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["gardens", "{{gardenId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /gardens/:id (Delete Garden)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/gardens/{{gardenId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["gardens", "{{gardenId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vegetables",
+      "item": [
+        {
+          "name": "POST /vegetables (Add Vegetable)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Auto-save vegetableId for subsequent vegetable & price operations",
+                  "const res = pm.response.json();",
+                  "if (res.id) { pm.collectionVariables.set('vegetableId', res.id); }",
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tomato\",\n  \"importQty\": 100,\n  \"gardenId\": {{gardenId}}\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/vegetables", "host": ["{{baseUrl}}"], "path": ["vegetables"] }
+          }
+        },
+        {
+          "name": "GET /vegetables (List Vegetables)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/vegetables", "host": ["{{baseUrl}}"], "path": ["vegetables"] }
+          }
+        },
+        {
+          "name": "PUT /vegetables/:id (Update Import/Sold Qty)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"importQty\": 150,\n  \"soldQty\": 20\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vegetables/{{vegetableId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["vegetables", "{{vegetableId}}"]
+            }
+          }
+        },
+        {
+          "name": "POST /vegetables/:id/price (Set Price)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Auto-save priceId",
+                  "const res = pm.response.json();",
+                  "if (res.id) { pm.collectionVariables.set('priceId', res.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 25000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vegetables/{{vegetableId}}/price",
+              "host": ["{{baseUrl}}"],
+              "path": ["vegetables", "{{vegetableId}}", "price"]
+            }
+          }
+        },
+        {
+          "name": "PUT /vegetables/:id/price (Update Price)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 28000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vegetables/{{vegetableId}}/price",
+              "host": ["{{baseUrl}}"],
+              "path": ["vegetables", "{{vegetableId}}", "price"]
+            }
+          }
+        },
+        {
+          "name": "GET /vegetables/:id/price (Get Vegetable Price)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vegetables/{{vegetableId}}/price",
+              "host": ["{{baseUrl}}"],
+              "path": ["vegetables", "{{vegetableId}}", "price"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /vegetables/:id/price (Delete Price)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vegetables/{{vegetableId}}/price",
+              "host": ["{{baseUrl}}"],
+              "path": ["vegetables", "{{vegetableId}}", "price"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Price & Revenue",
+      "item": [
+        {
+          "name": "GET /price (List Prices by Period)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/price?period=day",
+              "host": ["{{baseUrl}}"],
+              "path": ["price"],
+              "query": [{ "key": "period", "value": "day", "description": "Options: day, week, month" }]
+            }
+          }
+        },
+        {
+          "name": "GET /all/price (Total Revenue Analysis)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/all/price?period=month",
+              "host": ["{{baseUrl}}"],
+              "path": ["all", "price"],
+              "query": [{ "key": "period", "value": "month", "description": "Options: day, week, month" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "IoT & Telemetry",
+      "item": [
+        {
+          "name": "POST /device/command (Control LED/Actuators via MQTT)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"garderID\": \"1\",\n  \"userId\": \"1\",\n  \"led1State\": \"On\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/device/command",
+              "host": ["{{baseUrl}}"],
+              "path": ["device", "command"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
