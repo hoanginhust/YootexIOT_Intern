@@ -5,7 +5,7 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "baseUrl", "value": "http://localhost:3000/api" },
     { "key": "accessToken", "value": "" },
     { "key": "userId", "value": "" },
     { "key": "gardenId", "value": "" },
@@ -31,20 +31,6 @@
         },
         {
           "name": "POST /auth/register",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "// Auto-save user ID upon successful registration",
-                  "const res = pm.response.json();",
-                  "if (res.id) { pm.collectionVariables.set('userId', res.id); }",
-                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));"
-                ]
-              }
-            }
-          ],
           "request": {
             "auth": { "type": "noauth" },
             "method": "POST",
@@ -64,14 +50,10 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// Extract JWT token and decode userId to collection variables",
+                  "// Save token for later requests",
                   "const res = pm.response.json();",
                   "if (res.access_token) {",
                   "  pm.collectionVariables.set('accessToken', res.access_token);",
-                  "  const base64Url = res.access_token.split('.')[1];",
-                  "  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');",
-                  "  const payload = JSON.parse(atob(base64));",
-                  "  if (payload.id) { pm.collectionVariables.set('userId', payload.id); }",
                   "}",
                   "pm.test('Status 200 OK', () => pm.response.to.have.status(200));"
                 ]
@@ -95,14 +77,14 @@
       "name": "Gardens",
       "item": [
         {
-          "name": "POST /gardens (Create Garden)",
+          "name": "POST /gardens",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// Auto-save gardenId for subsequent garden operations",
+                  "// Save the created garden ID",
                   "const res = pm.response.json();",
                   "if (res.id) { pm.collectionVariables.set('gardenId', res.id); }",
                   "pm.test('Status 201 Created', () => pm.response.to.have.status(201));"
@@ -121,7 +103,7 @@
           }
         },
         {
-          "name": "GET /gardens (List Gardens)",
+          "name": "GET /gardens",
           "request": {
             "method": "GET",
             "header": [],
@@ -129,7 +111,7 @@
           }
         },
         {
-          "name": "GET /gardens/:id (Garden Detail)",
+          "name": "GET /gardens/:id",
           "request": {
             "method": "GET",
             "header": [],
@@ -141,7 +123,7 @@
           }
         },
         {
-          "name": "PUT /gardens/:id (Update Garden)",
+          "name": "PUT /gardens/:id",
           "request": {
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -157,7 +139,7 @@
           }
         },
         {
-          "name": "DELETE /gardens/:id (Delete Garden)",
+          "name": "DELETE /gardens/:id",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -174,14 +156,14 @@
       "name": "Vegetables",
       "item": [
         {
-          "name": "POST /vegetables (Add Vegetable)",
+          "name": "POST /gardens/:gardenId/vegetables",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// Auto-save vegetableId for subsequent vegetable & price operations",
+                  "// Save the created vegetable ID",
                   "const res = pm.response.json();",
                   "if (res.id) { pm.collectionVariables.set('vegetableId', res.id); }",
                   "pm.test('Status 201 Created', () => pm.response.to.have.status(201));"
@@ -194,21 +176,29 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Tomato\",\n  \"importQty\": 100,\n  \"gardenId\": {{gardenId}}\n}"
+              "raw": "{\n  \"name\": \"Tomato\",\n  \"importQty\": 100\n}"
             },
-            "url": { "raw": "{{baseUrl}}/vegetables", "host": ["{{baseUrl}}"], "path": ["vegetables"] }
+            "url": {
+              "raw": "{{baseUrl}}/gardens/{{gardenId}}/vegetables",
+              "host": ["{{baseUrl}}"],
+              "path": ["gardens", "{{gardenId}}", "vegetables"]
+            }
           }
         },
         {
-          "name": "GET /vegetables (List Vegetables)",
+          "name": "GET /gardens/:gardenId/vegetables",
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/vegetables", "host": ["{{baseUrl}}"], "path": ["vegetables"] }
+            "url": {
+              "raw": "{{baseUrl}}/gardens/{{gardenId}}/vegetables",
+              "host": ["{{baseUrl}}"],
+              "path": ["gardens", "{{gardenId}}", "vegetables"]
+            }
           }
         },
         {
-          "name": "PUT /vegetables/:id (Update Import/Sold Qty)",
+          "name": "PUT /gardens/:gardenId/vegetables/:vegetableId",
           "request": {
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -217,27 +207,14 @@
               "raw": "{\n  \"importQty\": 150,\n  \"soldQty\": 20\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/vegetables/{{vegetableId}}",
+              "raw": "{{baseUrl}}/gardens/{{gardenId}}/vegetables/{{vegetableId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["vegetables", "{{vegetableId}}"]
+              "path": ["gardens", "{{gardenId}}", "vegetables", "{{vegetableId}}"]
             }
           }
         },
         {
-          "name": "POST /vegetables/:id/price (Set Price)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "// Auto-save priceId",
-                  "const res = pm.response.json();",
-                  "if (res.id) { pm.collectionVariables.set('priceId', res.id); }"
-                ]
-              }
-            }
-          ],
+          "name": "POST /gardens/:gardenId/vegetables/:vegetableId/price",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -246,14 +223,14 @@
               "raw": "{\n  \"price\": 25000\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/vegetables/{{vegetableId}}/price",
+              "raw": "{{baseUrl}}/gardens/{{gardenId}}/vegetables/{{vegetableId}}/price",
               "host": ["{{baseUrl}}"],
-              "path": ["vegetables", "{{vegetableId}}", "price"]
+              "path": ["gardens", "{{gardenId}}", "vegetables", "{{vegetableId}}", "price"]
             }
           }
         },
         {
-          "name": "PUT /vegetables/:id/price (Update Price)",
+          "name": "PUT /gardens/:gardenId/vegetables/:vegetableId/price",
           "request": {
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -262,33 +239,33 @@
               "raw": "{\n  \"price\": 28000\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/vegetables/{{vegetableId}}/price",
+              "raw": "{{baseUrl}}/gardens/{{gardenId}}/vegetables/{{vegetableId}}/price",
               "host": ["{{baseUrl}}"],
-              "path": ["vegetables", "{{vegetableId}}", "price"]
+              "path": ["gardens", "{{gardenId}}", "vegetables", "{{vegetableId}}", "price"]
             }
           }
         },
         {
-          "name": "GET /vegetables/:id/price (Get Vegetable Price)",
+          "name": "GET /gardens/:gardenId/vegetables/:vegetableId/price",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/vegetables/{{vegetableId}}/price",
+              "raw": "{{baseUrl}}/gardens/{{gardenId}}/vegetables/{{vegetableId}}/price",
               "host": ["{{baseUrl}}"],
-              "path": ["vegetables", "{{vegetableId}}", "price"]
+              "path": ["gardens", "{{gardenId}}", "vegetables", "{{vegetableId}}", "price"]
             }
           }
         },
         {
-          "name": "DELETE /vegetables/:id/price (Delete Price)",
+          "name": "DELETE /gardens/:gardenId/vegetables/:vegetableId/price",
           "request": {
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/vegetables/{{vegetableId}}/price",
+              "raw": "{{baseUrl}}/gardens/{{gardenId}}/vegetables/{{vegetableId}}/price",
               "host": ["{{baseUrl}}"],
-              "path": ["vegetables", "{{vegetableId}}", "price"]
+              "path": ["gardens", "{{gardenId}}", "vegetables", "{{vegetableId}}", "price"]
             }
           }
         }
@@ -298,7 +275,7 @@
       "name": "Price & Revenue",
       "item": [
         {
-          "name": "GET /price (List Prices by Period)",
+          "name": "GET /price",
           "request": {
             "method": "GET",
             "header": [],
@@ -306,12 +283,12 @@
               "raw": "{{baseUrl}}/price?period=day",
               "host": ["{{baseUrl}}"],
               "path": ["price"],
-              "query": [{ "key": "period", "value": "day", "description": "Options: day, week, month" }]
+              "query": [{ "key": "period", "value": "day" }]
             }
           }
         },
         {
-          "name": "GET /all/price (Total Revenue Analysis)",
+          "name": "GET /all/price",
           "request": {
             "method": "GET",
             "header": [],
@@ -319,7 +296,7 @@
               "raw": "{{baseUrl}}/all/price?period=month",
               "host": ["{{baseUrl}}"],
               "path": ["all", "price"],
-              "query": [{ "key": "period", "value": "month", "description": "Options: day, week, month" }]
+              "query": [{ "key": "period", "value": "month" }]
             }
           }
         }
@@ -329,13 +306,13 @@
       "name": "IoT & Telemetry",
       "item": [
         {
-          "name": "POST /device/command (Control LED/Actuators via MQTT)",
+          "name": "POST /device/command",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"garderID\": \"1\",\n  \"userId\": \"1\",\n  \"led1State\": \"On\"\n}"
+              "raw": "{\n  \"gardenId\": 1,\n  \"userId\": 1,\n  \"led1State\": \"On\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/device/command",

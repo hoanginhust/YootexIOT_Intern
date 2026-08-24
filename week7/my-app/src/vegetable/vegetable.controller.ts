@@ -9,51 +9,80 @@ import { AuthGuard } from '../auth/guard/auth.guard';
 @ApiTags('Vegetables')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(AuthGuard)
-@Controller('vegetables')
+@Controller('gardens/:gardenId/vegetables')
 export class VegetableController {
   constructor(private readonly vegetableService: VegetableService) {}
 
-  @ApiOperation({ summary: 'Add a new vegetable' })
+  @ApiOperation({ summary: 'Add a new vegetable to a garden' })
+  @ApiResponse({ status: 201, description: 'Vegetable created successfully.' })
   @Post()
-  create(@Body() dto: CreateVegetableDto) {
-    return this.vegetableService.create(dto);
+  create(
+    @Param('gardenId', ParseIntPipe) gardenId: number,
+    @Body() dto: CreateVegetableDto,
+  ) {
+    // Keep route gardenId as the source of truth
+    return this.vegetableService.create({ ...dto, gardenId });
   }
 
-  @ApiOperation({ summary: 'List all vegetables' })
+  @ApiOperation({ summary: 'List vegetables in a garden' })
+  @ApiResponse({ status: 200, description: 'Vegetables retrieved successfully.' })
   @Get()
-  findAll() {
-    return this.vegetableService.findAll();
+  findAll(@Param('gardenId', ParseIntPipe) gardenId: number) {
+    return this.vegetableService.findAll(gardenId);
   }
 
-  @ApiOperation({ summary: 'Update vegetable import/sold stock' })
-  @Put(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateVegetableDto) {
-    return this.vegetableService.update(id, dto);
+  @ApiOperation({ summary: 'Update a vegetable in a garden' })
+  @ApiResponse({ status: 200, description: 'Vegetable updated successfully.' })
+  @Put(':vegetableId')
+  update(
+    @Param('gardenId', ParseIntPipe) gardenId: number,
+    @Param('vegetableId', ParseIntPipe) vegetableId: number,
+    @Body() dto: UpdateVegetableDto,
+  ) {
+    return this.vegetableService.update(gardenId, vegetableId, dto);
   }
 
   // --- Price Sub-Endpoints ---
 
   @ApiOperation({ summary: 'Set vegetable price' })
-  @Post(':id/price')
-  setPrice(@Param('id', ParseIntPipe) id: number, @Body() dto: SetPriceDto) {
-    return this.vegetableService.setPrice(id, dto);
+  @ApiResponse({ status: 201, description: 'Price record created successfully.' })
+  @Post(':vegetableId/price')
+  setPrice(
+    @Param('gardenId', ParseIntPipe) gardenId: number,
+    @Param('vegetableId', ParseIntPipe) vegetableId: number,
+    @Body() dto: SetPriceDto,
+  ) {
+    return this.vegetableService.setPrice(gardenId, vegetableId, dto);
   }
 
   @ApiOperation({ summary: 'Update vegetable price' })
-  @Put(':id/price')
-  updatePrice(@Param('id', ParseIntPipe) id: number, @Body() dto: SetPriceDto) {
-    return this.vegetableService.updatePrice(id, dto);
+  @ApiResponse({ status: 200, description: 'Latest price updated successfully.' })
+  @Put(':vegetableId/price')
+  updatePrice(
+    @Param('gardenId', ParseIntPipe) gardenId: number,
+    @Param('vegetableId', ParseIntPipe) vegetableId: number,
+    @Body() dto: SetPriceDto,
+  ) {
+    return this.vegetableService.updatePrice(gardenId, vegetableId, dto);
   }
 
   @ApiOperation({ summary: 'Get vegetable price history' })
-  @Get(':id/price')
-  getPrice(@Param('id', ParseIntPipe) id: number) {
-    return this.vegetableService.getPrice(id);
+  @ApiResponse({ status: 200, description: 'Price history retrieved successfully.' })
+  @Get(':vegetableId/price')
+  getPrice(
+    @Param('gardenId', ParseIntPipe) gardenId: number,
+    @Param('vegetableId', ParseIntPipe) vegetableId: number,
+  ) {
+    return this.vegetableService.getPrice(gardenId, vegetableId);
   }
 
   @ApiOperation({ summary: 'Delete vegetable price records' })
-  @Delete(':id/price')
-  deletePrice(@Param('id', ParseIntPipe) id: number) {
-    return this.vegetableService.deletePrice(id);
+  @ApiResponse({ status: 200, description: 'Price records deleted successfully.' })
+  @Delete(':vegetableId/price')
+  deletePrice(
+    @Param('gardenId', ParseIntPipe) gardenId: number,
+    @Param('vegetableId', ParseIntPipe) vegetableId: number,
+  ) {
+    return this.vegetableService.deletePrice(gardenId, vegetableId);
   }
 }

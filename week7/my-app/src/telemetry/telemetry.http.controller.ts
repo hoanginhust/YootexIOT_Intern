@@ -1,6 +1,7 @@
-import { Controller, Post, Body, Inject, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Inject, UseGuards, HttpException, HttpStatus, HttpCode } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
+import { lastValueFrom } from 'rxjs';
 import { DeviceCommandDto } from './dto/device-command.dto';
 import { AuthGuard } from '../auth/guard/auth.guard';
 
@@ -14,15 +15,24 @@ export class TelemetryHttpController {
   ) {}
 
   @ApiOperation({ summary: 'Send light/LED control command to ESP32 via MQTT' })
-  @ApiResponse({ status: 200, description: 'Command published to MQTT Broker.' })
+  @ApiOkResponse({ description: 'Command published to MQTT Broker.' })
+  @ApiResponse({ status: 502, description: 'Failed to publish command to MQTT Broker.' })
+  @HttpCode(HttpStatus.OK)
   @Post('command')
-  sendCommand(@Body() dto: DeviceCommandDto) {
-    // Publish structured command payload to MQTT Topic 'esp32/commands'
-    this.mqttClient.emit('esp32/commands', dto);
+  async sendCommand(@Body() dto: DeviceCommandDto) {
+    // Publish structured command payload to MQTT topic.
+    try {
+      await lastValueFrom(this.mqttClient.emit('esp32/commands', dto));
 
-    return {
-      message: 'Command successfully published to MQTT Broker',
-      data: dto,
-    };
+      return {
+        message: 'Command successfully published to MQTT Broker',
+        data: dto,
+      };
+    } catch (error: unknown) {
+      throw new HttpException(
+        'Failed to publish command to MQTT Broker',
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
   }
 }

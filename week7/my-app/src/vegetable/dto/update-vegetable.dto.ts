@@ -13,4 +13,8 @@ export class UpdateVegetableDto {
   @Min(0)
   @IsOptional()
   soldQty?: number;
+
+  @ApiPropertyOptional({ example: 'Tomato', description: 'Updated vegetable name' })
+  @IsOptional()
+  name?: string;
 }

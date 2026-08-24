@@ -12,7 +12,8 @@ export class CreateVegetableDto {
   @Min(0)
   importQty!: number;
 
-  @ApiProperty({ example: 1, description: 'ID of target garden' })
+  @ApiProperty({ example: 1, description: 'Target garden ID' })
   @IsInt()
+  @Min(1)
   gardenId!: number;
 }

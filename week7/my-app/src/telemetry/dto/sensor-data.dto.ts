@@ -1,9 +1,10 @@
-import { IsNumber, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsNumber, IsNotEmpty, IsOptional, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class SensorDataDto {
   @ApiProperty({ example: 1, description: 'Garden ID associated with sensor' })
   @IsNumber()
+  @Min(1)
   @IsNotEmpty()
   gardenId!: number;
 

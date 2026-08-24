@@ -26,9 +26,15 @@ export class TelemetryGateway implements OnGatewayConnection, OnGatewayDisconnec
     this.logger.log(`WebSocket client disconnected: ${client.id}`);
   }
 
-  broadcastTelemetry(data: any) {
+  broadcastTelemetry(data: unknown) {
     if (this.server) {
       this.server.emit('sensor_data', data);
+    }
+  }
+
+  broadcastAlert(data: unknown) {
+    if (this.server) {
+      this.server.emit('critical_alert', data);
     }
   }
 }

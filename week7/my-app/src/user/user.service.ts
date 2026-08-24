@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ActiveUserData } from '../auth/interface/active-user.interface';
-import { Role } from '@prisma/client';
+import { Role, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -49,11 +49,12 @@ export class UserService {
     return user;
   }
 
-  // Update authenticated user display details
+  // Update authenticated user details (Strictly allows name, password)
   async update(id: number, dto: UpdateUserDto) {
     await this.findOne(id);
 
-    const dataToUpdate: Record<string, any> = {};
+    // Whitelist only allowable fields to prevent mass-assignment privilege escalation
+    const dataToUpdate: Prisma.UserUpdateInput = {};
     if (dto.name) dataToUpdate.name = dto.name;
     if (dto.password) {
       dataToUpdate.password = await bcrypt.hash(dto.password, 10);

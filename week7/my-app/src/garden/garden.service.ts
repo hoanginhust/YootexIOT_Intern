@@ -9,7 +9,7 @@ import { Role } from '@prisma/client';
 export class GardenService {
   constructor(private prisma: PrismaService) {}
 
-  // Create new garden attached to current owner
+  // Create a new garden for the current owner
   async create(createGardenDto: CreateGardenDto, user: ActiveUserData) {
     return this.prisma.garden.create({
       data: {
@@ -19,7 +19,7 @@ export class GardenService {
     });
   }
 
-  // Get gardens list (Admin views all, User views owned gardens only)
+  // Get gardens list by role
   async findAll(user: ActiveUserData) {
     if (user.role === Role.ADMIN) {
       return this.prisma.garden.findMany({
@@ -33,7 +33,7 @@ export class GardenService {
     });
   }
 
-  // Get detail of a specific garden
+  // Get one garden detail with recent sensor data
   async findOne(id: number, user: ActiveUserData) {
     const garden = await this.prisma.garden.findUnique({
       where: { id },
@@ -51,9 +51,9 @@ export class GardenService {
     return garden;
   }
 
-  // Update garden info
+  // Update garden info after access check
   async update(id: number, updateGardenDto: UpdateGardenDto, user: ActiveUserData) {
-    await this.findOne(id, user); // Verify ownership
+    await this.findOne(id, user);
 
     return this.prisma.garden.update({
       where: { id },
@@ -61,9 +61,9 @@ export class GardenService {
     });
   }
 
-  // Delete garden record
+  // Remove garden after access check
   async remove(id: number, user: ActiveUserData) {
-    await this.findOne(id, user); // Verify ownership
+    await this.findOne(id, user);
 
     await this.prisma.garden.delete({ where: { id } });
     return { message: `Successfully deleted garden with ID ${id}` };
