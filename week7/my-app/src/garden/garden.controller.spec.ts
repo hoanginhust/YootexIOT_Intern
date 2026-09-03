@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { GardenController } from './garden.controller';
 import { GardenService } from './garden.service';
+import { AuthGuard } from '../auth/guard/auth.guard';
 
 describe('GardenController', () => {
   let controller: GardenController;
@@ -17,7 +18,10 @@ describe('GardenController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [GardenController],
       providers: [{ provide: GardenService, useValue: gardenService }],
-    }).compile();
+    })
+      .overrideGuard(AuthGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<GardenController>(GardenController);
     jest.clearAllMocks();

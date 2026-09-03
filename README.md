@@ -11,3 +11,7 @@
 ### [Tuần 4](./week4) - Làm việc với Passport, Guard và Role-based Authentication
 
 ### [Tuần 5](./week5) - Làm việc với Swagger và Cấu hình file .env
+
+### [Tuần 6](./week6) - Microservice, MQTT và WebSocket
+
+### [Tuần 7](./week5) - Miniproject

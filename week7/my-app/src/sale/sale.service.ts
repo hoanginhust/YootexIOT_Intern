@@ -1,13 +1,17 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
+import { ActiveUserData } from '../auth/interface/active-user.interface';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class SaleService {
   constructor(private prisma: PrismaService) {}
 
-  // Process a vegetable sale transaction using Prisma Transaction
-  async create(dto: CreateSaleDto) {
+  // Process a vegetable sale transaction using Prisma Transaction (owner only)
+  async create(dto: CreateSaleDto, user: ActiveUserData) {
+    await this.ensureGardenOwner(dto.gardenId, user);
+
     return this.prisma.$transaction(async (tx) => {
       // 1. Fetch vegetable details with its latest set price
       const veg = await tx.vegetable.findUnique({
@@ -56,9 +60,10 @@ export class SaleService {
     });
   }
 
-  // List all sales transactions
-  async findAll() {
+  // List all sales transactions (ADMIN sees all, USER sees only their own gardens' sales)
+  async findAll(user: ActiveUserData) {
     return this.prisma.sale.findMany({
+      where: user.role === Role.ADMIN ? {} : { garden: { ownerId: user.id } },
       include: {
         garden: { select: { id: true, name: true } },
         vegetable: { select: { id: true, name: true } },
@@ -67,17 +72,35 @@ export class SaleService {
     });
   }
 
-  // Get details of a single sale record
-  async findOne(id: number) {
+  // Get details of a single sale record (owner or admin)
+  async findOne(id: number, user: ActiveUserData) {
     const sale = await this.prisma.sale.findUnique({
       where: { id },
       include: {
-        garden: { select: { id: true, name: true } },
+        garden: { select: { id: true, name: true, ownerId: true } },
         vegetable: { select: { id: true, name: true } },
       },
     });
 
     if (!sale) throw new NotFoundException(`Sale transaction #${id} not found.`);
+
+    if (user.role !== Role.ADMIN && sale.garden.ownerId !== user.id) {
+      throw new ForbiddenException('You do not have access to this sale transaction.');
+    }
+
     return sale;
+  }
+
+  // STRICT ownership check for business operations (create sale).
+  // Even ADMIN cannot create sales in another user's garden.
+  private async ensureGardenOwner(gardenId: number, user: ActiveUserData) {
+    const garden = await this.prisma.garden.findUnique({ where: { id: gardenId } });
+    if (!garden) throw new NotFoundException(`Garden with ID ${gardenId} not found.`);
+
+    if (garden.ownerId !== user.id) {
+      throw new ForbiddenException('You do not have access to this garden.');
+    }
+
+    return garden;
   }
 }

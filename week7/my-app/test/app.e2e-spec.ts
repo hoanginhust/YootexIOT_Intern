@@ -13,14 +13,16 @@ describe('AppController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    // Mirror the bootstrap configuration from main.ts
+    app.setGlobalPrefix('api');
     await app.init();
   });
 
-  it('/ (GET)', () => {
+  it('/api/hello (GET)', () => {
     return request(app.getHttpServer())
-      .get('/')
+      .get('/api/hello')
       .expect(200)
-      .expect('Hello World!');
+      .expect({ message: 'Smart Garden IoT System Backend API is running!' });
   });
 
   afterEach(async () => {

@@ -1,6 +1,8 @@
-// Interface matching the payload injected into req.user by JwtStrategy
+import { Role } from '@prisma/client';
+
+// Payload structure injected into req.user after JWT verification
 export interface ActiveUserData {
   id: number;
   email: string;
-  role: string;
+  role: Role;
 }

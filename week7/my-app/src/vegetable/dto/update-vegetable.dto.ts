@@ -1,4 +1,4 @@
-import { IsOptional, IsInt, Min } from 'class-validator';
+import { IsOptional, IsInt, Min, IsString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateVegetableDto {
@@ -15,6 +15,7 @@ export class UpdateVegetableDto {
   soldQty?: number;
 
   @ApiPropertyOptional({ example: 'Tomato', description: 'Updated vegetable name' })
+  @IsString()
   @IsOptional()
   name?: string;
 }

@@ -15,8 +15,10 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return hello message object', () => {
-      expect(appController.getHello()).toEqual({ message: 'Hello NestJS!' });
+    it('should return running message object', () => {
+      expect(appController.getHello()).toEqual({
+        message: 'Smart Garden IoT System Backend API is running!',
+      });
     });
   });
 });

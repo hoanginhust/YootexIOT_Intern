@@ -1,31 +1,34 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
-import 'dotenv/config'; // Load environment variables globally
+import { Pool } from 'pg';
+import 'dotenv/config';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(PrismaService.name);
+
   constructor() {
-    // Prisma v7+ strictly requires a Driver Adapter to connect
-    const adapter = new PrismaPg({ 
-      connectionString: process.env.DATABASE_URL as string 
+    // Create connection pool instance required by @prisma/adapter-pg
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
     });
-    
-    super({ 
-      adapter 
-    });
+    const adapter = new PrismaPg(pool);
+
+    super({ adapter });
   }
 
-  // Establish connection when module initializes
+  // Connect to database on module initialization
   async onModuleInit() {
     try {
       await this.$connect();
+      this.logger.log('Connected to PostgreSQL database successfully.');
     } catch (error) {
-      console.error('Prisma connection error during initialization:', error);
+      this.logger.error('Prisma connection error during initialization:', error);
     }
   }
 
-  // Teardown connection gracefully
+  // Gracefully close connection on teardown
   async onModuleDestroy() {
     await this.$disconnect();
   }

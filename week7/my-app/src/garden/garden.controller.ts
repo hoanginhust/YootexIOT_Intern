@@ -16,6 +16,8 @@ export class GardenController {
 
   @ApiOperation({ summary: 'Create a new garden (Owner or Admin)' })
   @ApiResponse({ status: 201, description: 'Garden created successfully.' })
+  @ApiResponse({ status: 400, description: 'Invalid data.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - missing or invalid JWT token.' })
   @Post()
   create(@Body() createGardenDto: CreateGardenDto, @CurrentUser() user: ActiveUserData) {
     return this.gardenService.create(createGardenDto, user);
@@ -23,6 +25,7 @@ export class GardenController {
 
   @ApiOperation({ summary: 'List gardens (Admin sees all, User sees owned only)' })
   @ApiResponse({ status: 200, description: 'Gardens retrieved.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - missing or invalid JWT token.' })
   @Get()
   findAll(@CurrentUser() user: ActiveUserData) {
     return this.gardenService.findAll(user);
@@ -30,6 +33,9 @@ export class GardenController {
 
   @ApiOperation({ summary: 'Get garden details by ID' })
   @ApiResponse({ status: 200, description: 'Garden found.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - missing or invalid JWT token.' })
+  @ApiResponse({ status: 403, description: 'Forbidden - not the garden owner.' })
+  @ApiResponse({ status: 404, description: 'Garden not found.' })
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: ActiveUserData) {
     return this.gardenService.findOne(id, user);
@@ -37,6 +43,10 @@ export class GardenController {
 
   @ApiOperation({ summary: 'Update garden details' })
   @ApiResponse({ status: 200, description: 'Garden updated.' })
+  @ApiResponse({ status: 400, description: 'Invalid data.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - missing or invalid JWT token.' })
+  @ApiResponse({ status: 403, description: 'Forbidden - not the garden owner.' })
+  @ApiResponse({ status: 404, description: 'Garden not found.' })
   @Put(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -48,6 +58,9 @@ export class GardenController {
 
   @ApiOperation({ summary: 'Delete garden' })
   @ApiResponse({ status: 200, description: 'Garden deleted.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - missing or invalid JWT token.' })
+  @ApiResponse({ status: 403, description: 'Forbidden - not the garden owner.' })
+  @ApiResponse({ status: 404, description: 'Garden not found.' })
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: ActiveUserData) {
     return this.gardenService.remove(id, user);

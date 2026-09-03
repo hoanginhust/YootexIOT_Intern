@@ -1,10 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SaleService } from './sale.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 
 describe('SaleService', () => {
   let service: SaleService;
+
+  const mockUser = { id: 1, email: 'owner@example.com', role: 'USER' };
+  const mockAdmin = { id: 2, email: 'admin@example.com', role: 'ADMIN' };
 
   const mockTx = {
     vegetable: {
@@ -21,6 +24,9 @@ describe('SaleService', () => {
 
   const mockPrisma = {
     $transaction: jest.fn((cb) => cb(mockTx)),
+    garden: {
+      findUnique: jest.fn(),
+    },
   };
 
   beforeEach(async () => {
@@ -36,13 +42,27 @@ describe('SaleService', () => {
     expect(service).toBeDefined();
   });
 
+  it('should throw ForbiddenException when selling in another user garden', async () => {
+    mockPrisma.garden.findUnique.mockResolvedValue({ id: 1, ownerId: 99 });
+
+    await expect(service.create({ gardenId: 1, vegetableId: 1, quantity: 2 }, mockUser)).rejects.toThrow(ForbiddenException);
+  });
+
+  it('should throw ForbiddenException even for ADMIN when selling in another user garden', async () => {
+    mockPrisma.garden.findUnique.mockResolvedValue({ id: 1, ownerId: 99 });
+
+    await expect(service.create({ gardenId: 1, vegetableId: 1, quantity: 2 }, mockAdmin)).rejects.toThrow(ForbiddenException);
+  });
+
   it('should throw when vegetable not found', async () => {
+    mockPrisma.garden.findUnique.mockResolvedValue({ id: 1, ownerId: 1 });
     mockTx.vegetable.findUnique.mockResolvedValue(null);
 
-    await expect(service.create({ gardenId: 1, vegetableId: 1, quantity: 2 })).rejects.toThrow(NotFoundException);
+    await expect(service.create({ gardenId: 1, vegetableId: 1, quantity: 2 }, mockUser)).rejects.toThrow(NotFoundException);
   });
 
   it('should throw when gardenId mismatch', async () => {
+    mockPrisma.garden.findUnique.mockResolvedValue({ id: 1, ownerId: 1 });
     mockTx.vegetable.findUnique.mockResolvedValue({
       id: 1,
       gardenId: 2,
@@ -51,10 +71,11 @@ describe('SaleService', () => {
       prices: [{ price: 10000 }],
     });
 
-    await expect(service.create({ gardenId: 1, vegetableId: 1, quantity: 2 })).rejects.toThrow(BadRequestException);
+    await expect(service.create({ gardenId: 1, vegetableId: 1, quantity: 2 }, mockUser)).rejects.toThrow(BadRequestException);
   });
 
   it('should throw when insufficient stock', async () => {
+    mockPrisma.garden.findUnique.mockResolvedValue({ id: 1, ownerId: 1 });
     mockTx.vegetable.findUnique.mockResolvedValue({
       id: 1,
       gardenId: 1,
@@ -63,10 +84,11 @@ describe('SaleService', () => {
       prices: [{ price: 10000 }],
     });
 
-    await expect(service.create({ gardenId: 1, vegetableId: 1, quantity: 2 })).rejects.toThrow(BadRequestException);
+    await expect(service.create({ gardenId: 1, vegetableId: 1, quantity: 2 }, mockUser)).rejects.toThrow(BadRequestException);
   });
 
   it('should throw when no price set', async () => {
+    mockPrisma.garden.findUnique.mockResolvedValue({ id: 1, ownerId: 1 });
     mockTx.vegetable.findUnique.mockResolvedValue({
       id: 1,
       gardenId: 1,
@@ -75,6 +97,6 @@ describe('SaleService', () => {
       prices: [],
     });
 
-    await expect(service.create({ gardenId: 1, vegetableId: 1, quantity: 2 })).rejects.toThrow(BadRequestException);
+    await expect(service.create({ gardenId: 1, vegetableId: 1, quantity: 2 }, mockUser)).rejects.toThrow(BadRequestException);
   });
 });

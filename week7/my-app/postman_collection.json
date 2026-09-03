@@ -31,6 +31,25 @@
         },
         {
           "name": "POST /auth/register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "const res = pm.response.json();",
+                  "if (res.id) {",
+                  "  pm.collectionVariables.set('userId', res.id);",
+                  "  console.log('Saved userId:', res.id);",
+                  "}",
+                  "if (res.access_token) {",
+                  "  pm.collectionVariables.set('accessToken', res.access_token);",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "auth": { "type": "noauth" },
             "method": "POST",
@@ -312,7 +331,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"gardenId\": 1,\n  \"userId\": 1,\n  \"led1State\": \"On\"\n}"
+              "raw": "{\n  \"gardenId\": {{gardenId}},\n  \"userId\": {{userId}},\n  \"led1State\": \"On\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/device/command",

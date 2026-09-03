@@ -15,26 +15,30 @@ export class SaleController {
 
   @ApiOperation({ summary: 'Create a new vegetable sale transaction' })
   @ApiResponse({ status: 201, description: 'Sale completed successfully.' })
-  @ApiResponse({ status: 400, description: 'Invalid data or insufficient stock.' })
-  @ApiResponse({ status: 404, description: 'Vegetable not found.' })
+  @ApiResponse({ status: 400, description: 'Invalid data, insufficient stock, vegetable not in this garden or price not set.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - missing or invalid JWT token.' })
+  @ApiResponse({ status: 403, description: 'Forbidden - not the garden owner.' })
+  @ApiResponse({ status: 404, description: 'Garden or vegetable not found.' })
   @Post()
   create(@Body() dto: CreateSaleDto, @CurrentUser() user: ActiveUserData) {
-    // TODO: Add ownership check if needed
-    return this.saleService.create(dto);
+    return this.saleService.create(dto, user);
   }
 
-  @ApiOperation({ summary: 'List all sales history' })
+  @ApiOperation({ summary: 'List sales history (own gardens for USER, all for ADMIN)' })
   @ApiResponse({ status: 200, description: 'Sales history retrieved successfully.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - missing or invalid JWT token.' })
   @Get()
-  findAll() {
-    return this.saleService.findAll();
+  findAll(@CurrentUser() user: ActiveUserData) {
+    return this.saleService.findAll(user);
   }
 
   @ApiOperation({ summary: 'Get details of a sale transaction' })
   @ApiResponse({ status: 200, description: 'Sale transaction found.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - missing or invalid JWT token.' })
+  @ApiResponse({ status: 403, description: 'Forbidden - sale does not belong to your garden.' })
   @ApiResponse({ status: 404, description: 'Sale transaction not found.' })
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.saleService.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: ActiveUserData) {
+    return this.saleService.findOne(id, user);
   }
 }

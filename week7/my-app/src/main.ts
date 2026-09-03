@@ -13,13 +13,13 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const configService = app.get(ConfigService);
 
-  // Enable CORS for frontend connection
+  // Enable CORS
   app.enableCors();
 
-  // Set global API prefix
+  // Set global API route prefix
   app.setGlobalPrefix('api');
 
-  // Validate required environment variables
+  // Verify critical startup environment variables
   const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET'];
   for (const envVar of requiredEnvVars) {
     if (!configService.get(envVar)) {
@@ -28,7 +28,7 @@ async function bootstrap() {
     }
   }
 
-  // Enable global validation pipe for DTOs
+  // Enforce DTO validation rules globally
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -37,10 +37,10 @@ async function bootstrap() {
     }),
   );
 
-  // Register global Prisma exception filter
+  // Register Prisma exception filter globally
   app.useGlobalFilters(new PrismaClientExceptionFilter());
 
-  // Connect MQTT Microservice with URL from env
+  // Connect MQTT Microservice (HiveMQ)
   const mqttUrl = configService.get<string>('MQTT_URL') || 'mqtt://broker.hivemq.com:1883';
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.MQTT,
@@ -49,10 +49,10 @@ async function bootstrap() {
     },
   });
 
-  // Configure Swagger Documentation
+  // Swagger Documentation configuration
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Smart Garden IoT Management System API')
-    .setDescription('RESTful API & MQTT/WebSocket Microservice documentation for Smart Garden System')
+    .setDescription('RESTful API & MQTT/WebSocket Microservice documentation')
     .setVersion('1.0')
     .addBearerAuth(
       {
@@ -60,7 +60,7 @@ async function bootstrap() {
         scheme: 'bearer',
         bearerFormat: 'JWT',
         name: 'JWT Authorization',
-        description: 'Enter JWT token here',
+        description: 'Enter your Bearer Token here',
         in: 'header',
       },
       'JWT-auth',
@@ -75,7 +75,7 @@ async function bootstrap() {
   const port = configService.get<number>('PORT') || 3000;
   await app.listen(port);
 
-  logger.log(`HTTP & WebSockets running on: http://localhost:${port}/api`);
+  logger.log(`HTTP server running on: http://localhost:${port}/api`);
   logger.log(`Swagger UI available at: http://localhost:${port}/api/docs`);
 }
 bootstrap();

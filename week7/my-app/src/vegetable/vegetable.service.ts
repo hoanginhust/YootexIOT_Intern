@@ -1,31 +1,32 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateVegetableDto } from './dto/create-vegetable.dto';
 import { UpdateVegetableDto } from './dto/update-vegetable.dto';
 import { SetPriceDto } from './dto/set-price.dto';
+import { ActiveUserData } from '../auth/interface/active-user.interface';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class VegetableService {
   constructor(private prisma: PrismaService) {}
 
-  // Create a vegetable record for one garden
-  async create(dto: CreateVegetableDto) {
-    const garden = await this.prisma.garden.findUnique({ where: { id: dto.gardenId } });
-    if (!garden) throw new NotFoundException(`Garden with ID ${dto.gardenId} not found.`);
+  // Create a vegetable record for one garden (owner only)
+  async create(gardenId: number, dto: CreateVegetableDto, user: ActiveUserData) {
+    await this.ensureGardenOwner(gardenId, user);
 
     return this.prisma.vegetable.create({
       data: {
         name: dto.name,
         importQty: dto.importQty,
         soldQty: 0,
-        gardenId: dto.gardenId,
+        gardenId,
       },
     });
   }
 
-  // Get vegetables of a specific garden
-  async findAll(gardenId: number) {
-    await this.ensureGardenExists(gardenId);
+  // Get vegetables of a specific garden (owner or admin for monitoring)
+  async findAll(gardenId: number, user: ActiveUserData) {
+    await this.ensureGardenAccess(gardenId, user);
 
     return this.prisma.vegetable.findMany({
       where: { gardenId },
@@ -36,8 +37,35 @@ export class VegetableService {
     });
   }
 
-  // Update vegetable info with quantity validation
-  async update(gardenId: number, vegetableId: number, dto: UpdateVegetableDto) {
+  // Aggregate stock inventory summary across all gardens
+  async getAggregatedSummary() {
+    const stockSummary = await this.prisma.vegetable.groupBy({
+      by: ['name'],
+      _sum: {
+        importQty: true,
+        soldQty: true,
+      },
+      _count: {
+        gardenId: true,
+      },
+    });
+
+    return stockSummary.map((item) => {
+      const totalImport = item._sum.importQty || 0;
+      const totalSold = item._sum.soldQty || 0;
+      return {
+        vegetableName: item.name,
+        totalGardens: item._count.gardenId,
+        totalImportQty: totalImport,
+        totalSoldQty: totalSold,
+        totalRemainingStock: totalImport - totalSold,
+      };
+    });
+  }
+
+  // Update vegetable info with quantity validation (owner only)
+  async update(gardenId: number, vegetableId: number, dto: UpdateVegetableDto, user: ActiveUserData) {
+    await this.ensureGardenOwner(gardenId, user);
     const veg = await this.findOneVegetable(gardenId, vegetableId);
 
     const newImportQty = dto.importQty ?? veg.importQty;
@@ -57,8 +85,9 @@ export class VegetableService {
     });
   }
 
-  // Add new price record
-  async setPrice(gardenId: number, vegetableId: number, dto: SetPriceDto) {
+  // Add new price record (owner only)
+  async setPrice(gardenId: number, vegetableId: number, dto: SetPriceDto, user: ActiveUserData) {
+    await this.ensureGardenOwner(gardenId, user);
     await this.findOneVegetable(gardenId, vegetableId);
 
     return this.prisma.vegetablePrice.create({
@@ -69,8 +98,9 @@ export class VegetableService {
     });
   }
 
-  // Update the latest price record only
-  async updatePrice(gardenId: number, vegetableId: number, dto: SetPriceDto) {
+  // Update the latest price record only (owner only)
+  async updatePrice(gardenId: number, vegetableId: number, dto: SetPriceDto, user: ActiveUserData) {
+    await this.ensureGardenOwner(gardenId, user);
     await this.findOneVegetable(gardenId, vegetableId);
 
     const latestPrice = await this.prisma.vegetablePrice.findFirst({
@@ -78,7 +108,9 @@ export class VegetableService {
       orderBy: { appliedAt: 'desc' },
     });
 
-    if (!latestPrice) throw new NotFoundException(`No price record found for vegetable ID ${vegetableId}.`);
+    if (!latestPrice) {
+      throw new NotFoundException(`No price record found for vegetable ID ${vegetableId}.`);
+    }
 
     return this.prisma.vegetablePrice.update({
       where: { id: latestPrice.id },
@@ -86,8 +118,9 @@ export class VegetableService {
     });
   }
 
-  // Get price history of one vegetable
-  async getPrice(gardenId: number, vegetableId: number) {
+  // Get price history of one vegetable (owner or admin for monitoring)
+  async getPrice(gardenId: number, vegetableId: number, user: ActiveUserData) {
+    await this.ensureGardenAccess(gardenId, user);
     await this.findOneVegetable(gardenId, vegetableId);
 
     return this.prisma.vegetablePrice.findMany({
@@ -96,12 +129,37 @@ export class VegetableService {
     });
   }
 
-  // Delete all price history of one vegetable
-  async deletePrice(gardenId: number, vegetableId: number) {
+  // Delete all price history of one vegetable (owner only)
+  async deletePrice(gardenId: number, vegetableId: number, user: ActiveUserData) {
+    await this.ensureGardenOwner(gardenId, user);
     await this.findOneVegetable(gardenId, vegetableId);
 
     await this.prisma.vegetablePrice.deleteMany({ where: { vegetableId } });
     return { message: `Price records deleted for vegetable ID ${vegetableId}` };
+  }
+
+  // Strict ownership verification for business mutations
+  private async ensureGardenOwner(gardenId: number, user: ActiveUserData) {
+    const garden = await this.prisma.garden.findUnique({ where: { id: gardenId } });
+    if (!garden) throw new NotFoundException(`Garden with ID ${gardenId} not found.`);
+
+    if (garden.ownerId !== user.id) {
+      throw new ForbiddenException('You do not have access to this garden.');
+    }
+
+    return garden;
+  }
+
+  // Access check for monitoring and read actions
+  private async ensureGardenAccess(gardenId: number, user: ActiveUserData) {
+    const garden = await this.prisma.garden.findUnique({ where: { id: gardenId } });
+    if (!garden) throw new NotFoundException(`Garden with ID ${gardenId} not found.`);
+
+    if (user.role !== Role.ADMIN && garden.ownerId !== user.id) {
+      throw new ForbiddenException('You do not have access to this garden.');
+    }
+
+    return garden;
   }
 
   private async findOneVegetable(gardenId: number, vegetableId: number) {
@@ -114,11 +172,5 @@ export class VegetableService {
     }
 
     return veg;
-  }
-
-  private async ensureGardenExists(gardenId: number) {
-    const garden = await this.prisma.garden.findUnique({ where: { id: gardenId } });
-    if (!garden) throw new NotFoundException(`Garden with ID ${gardenId} not found.`);
-    return garden;
   }
 }
