@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
@@ -5,11 +6,11 @@
 // ==========================================
 // 1. NETWORK & MQTT BROKER CONFIGURATION
 // ==========================================
-const char* WIFI_SSID     = "YOUR_WIFI_SSID";      // Replace with your 2.4GHz Wi-Fi SSID
-const char* WIFI_PASS     = "YOUR_WIFI_PASSWORD";  // Replace with your Wi-Fi Password
-const char* MQTT_HOST     = "broker.hivemq.com";  // HiveMQ Public Broker matching backend .env
+const char* WIFI_SSID     = ".";     // Replace with your 2.4GHz Wi-Fi SSID
+const char* WIFI_PASS     = "912346780";       // Replace with your Wi-Fi Password
+const char* MQTT_HOST     = "broker.hivemq.com";       // HiveMQ Public Broker matching backend .env
 const uint16_t MQTT_PORT  = 1883;
-const char* MQTT_USER     = "";                   // Keep empty for public broker
+const char* MQTT_USER     = "";                        // Keep empty for public broker
 const char* MQTT_PASS     = "";
 
 // Target Garden ID: Must match a registered garden in PostgreSQL
@@ -39,7 +40,7 @@ DHT dht(DHT_PIN, DHT_TYPE);
 // ==========================================
 // 3. OPERATIONAL CONSTANTS & STATE VARIABLES
 // ==========================================
-const unsigned long SENSOR_INTERVAL_MS = 5000; // Publish interval: 5 seconds
+const unsigned long SENSOR_INTERVAL_MS = 1000; // Publish interval: 5 seconds
 const float TEMP_MAX     = 38.0;              // High temperature alert threshold
 const float TEMP_WARN    = 32.0;              // Warning threshold
 const float HUMIDITY_MIN = 30.0;              // Low humidity alert threshold
