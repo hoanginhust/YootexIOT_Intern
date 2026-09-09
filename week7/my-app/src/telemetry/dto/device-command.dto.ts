@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, Min, IsIn, IsOptional } from 'class-validator';
+import { IsInt, Min, IsIn, IsOptional } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class DeviceCommandDto {
@@ -12,22 +12,52 @@ export class DeviceCommandDto {
   @Min(1)
   userId!: number;
 
-  @ApiProperty({ example: 'On', description: 'LED 1 state: On or Off (backward compatible)', enum: ['On', 'Off'] })
+  // Operating mode toggle: Auto (sensor thresholds) or Manual (remote override)
+  @ApiPropertyOptional({
+    example: 'Manual',
+    description: 'Operating mode: Auto or Manual',
+    enum: ['Auto', 'Manual'],
+  })
+  @IsOptional()
+  @IsIn(['Auto', 'Manual'])
+  mode?: 'Auto' | 'Manual';
+
+  // Backward compatible legacy LED state
+  @ApiPropertyOptional({
+    example: 'On',
+    description: 'LED 1 state: On or Off (backward compatible)',
+    enum: ['On', 'Off'],
+  })
   @IsOptional()
   @IsIn(['On', 'Off'])
   led1State?: 'On' | 'Off';
 
-  @ApiPropertyOptional({ example: 'On', description: 'Red LED state: On or Off', enum: ['On', 'Off'] })
+  // Critical danger indicator (Temp > 38°C or Hum < 30%)
+  @ApiPropertyOptional({
+    example: 'On',
+    description: 'Red LED state: On or Off',
+    enum: ['On', 'Off'],
+  })
   @IsOptional()
   @IsIn(['On', 'Off'])
   ledRedState?: 'On' | 'Off';
 
-  @ApiPropertyOptional({ example: 'Off', description: 'Yellow LED state: On or Off', enum: ['On', 'Off'] })
+  // Early warning indicator (Temp 32°C - 38°C)
+  @ApiPropertyOptional({
+    example: 'Off',
+    description: 'Yellow LED state: On or Off',
+    enum: ['On', 'Off'],
+  })
   @IsOptional()
   @IsIn(['On', 'Off'])
   ledYellowState?: 'On' | 'Off';
 
-  @ApiPropertyOptional({ example: 'On', description: 'Green LED state: On or Off', enum: ['On', 'Off'] })
+  // Safe condition indicator (Temp <= 32°C and Hum >= 30%)
+  @ApiPropertyOptional({
+    example: 'On',
+    description: 'Green LED state: On or Off',
+    enum: ['On', 'Off'],
+  })
   @IsOptional()
   @IsIn(['On', 'Off'])
   ledGreenState?: 'On' | 'Off';

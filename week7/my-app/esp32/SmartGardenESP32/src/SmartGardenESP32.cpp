@@ -6,8 +6,8 @@
 // ==========================================
 // 1. NETWORK & MQTT BROKER CONFIGURATION
 // ==========================================
-const char* WIFI_SSID     = ".";     // Replace with your 2.4GHz Wi-Fi SSID
-const char* WIFI_PASS     = "912346780";       // Replace with your Wi-Fi Password
+const char* WIFI_SSID     = "Hoang Hiep-2.4G-ext";     // Replace with your 2.4GHz Wi-Fi SSID
+const char* WIFI_PASS     = "07042005";                // Replace with your Wi-Fi Password
 const char* MQTT_HOST     = "broker.hivemq.com";       // HiveMQ Public Broker matching backend .env
 const uint16_t MQTT_PORT  = 1883;
 const char* MQTT_USER     = "";                        // Keep empty for public broker
@@ -40,10 +40,10 @@ DHT dht(DHT_PIN, DHT_TYPE);
 // ==========================================
 // 3. OPERATIONAL CONSTANTS & STATE VARIABLES
 // ==========================================
-const unsigned long SENSOR_INTERVAL_MS = 1000; // Publish interval: 5 seconds
-const float TEMP_MAX     = 38.0;              // High temperature alert threshold
-const float TEMP_WARN    = 32.0;              // Warning threshold
-const float HUMIDITY_MIN = 30.0;              // Low humidity alert threshold
+const unsigned long SENSOR_INTERVAL_MS = 1000; // Publish interval: 1 seconds
+const float TEMP_MAX     = 38.0;               // High temperature alert threshold
+const float TEMP_WARN    = 32.0;               // Warning threshold
+const float HUMIDITY_MIN = 30.0;               // Low humidity alert threshold
 
 WiFiClient wifiClient;
 PubSubClient mqtt(wifiClient);
@@ -175,46 +175,63 @@ void connectMQTT() {
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   Serial.printf("\n[CMD] Inbound packet on topic: %s\n", topic);
 
-  StaticJsonDocument<256> doc;
+  // Allocate 512 bytes to accommodate NestJS microservice wrapper
+  StaticJsonDocument<512> doc;
   DeserializationError err = deserializeJson(doc, payload, length);
   if (err) {
     Serial.printf("[CMD] JSON parse error: %s\n", err.c_str());
     return;
   }
 
+  // Handle both raw JSON and NestJS microservice payload wrapper
+  JsonObject root = doc.containsKey("data") ? doc["data"].as<JsonObject>() : doc.as<JsonObject>();
+
   // Validate target garden ID
-  if (doc.containsKey("gardenId")) {
-    int cmdGardenId = doc["gardenId"].as<int>();
+  if (root.containsKey("gardenId")) {
+    int cmdGardenId = root["gardenId"].as<int>();
     if (cmdGardenId != GARDEN_ID) {
       Serial.printf("[CMD] Packet ignored: Target garden is %d (Device assigned to %d)\n", cmdGardenId, GARDEN_ID);
       return;
     }
   }
 
+  // 1. Check for explicit mode switch command
+  if (root.containsKey("mode")) {
+    if (strcmp(root["mode"], "Auto") == 0) {
+      manualMode = false;
+      Serial.println("[CMD] Mode switched to AUTO. Restoring sensor-based thresholds.");
+      // Instantly restore LEDs according to current environment status
+      setAutoStatusLeds(simTemp, simHum);
+      return;
+    } else if (strcmp(root["mode"], "Manual") == 0) {
+      manualMode = true;
+    }
+  }
+
   bool stateChanged = false;
 
-  // 1. Process 3-LED independent commands
-  if (doc.containsKey("ledRedState")) {
-    ledRed = (strcmp(doc["ledRedState"], "On") == 0);
+  // 2. Process 3-LED independent commands
+  if (root.containsKey("ledRedState")) {
+    ledRed = (strcmp(root["ledRedState"], "On") == 0);
     stateChanged = true;
   }
-  if (doc.containsKey("ledYellowState")) {
-    ledYellow = (strcmp(doc["ledYellowState"], "On") == 0);
+  if (root.containsKey("ledYellowState")) {
+    ledYellow = (strcmp(root["ledYellowState"], "On") == 0);
     stateChanged = true;
   }
-  if (doc.containsKey("ledGreenState")) {
-    ledGreen = (strcmp(doc["ledGreenState"], "On") == 0);
+  if (root.containsKey("ledGreenState")) {
+    ledGreen = (strcmp(root["ledGreenState"], "On") == 0);
     stateChanged = true;
   }
 
-  // 2. Backward compatibility: led1State (maps to Green LED)
-  if (doc.containsKey("led1State")) {
-    ledGreen = (strcmp(doc["led1State"], "On") == 0);
+  // 3. Backward compatibility: led1State (maps to Green LED)
+  if (root.containsKey("led1State")) {
+    ledGreen = (strcmp(root["led1State"], "On") == 0);
     stateChanged = true;
   }
 
   if (stateChanged) {
-    manualMode = true; // Lock in manual mode upon user interaction
+    manualMode = true; // Lock in manual mode upon manual actuation
     applyLeds();
     Serial.printf("[CMD] Output updated -> RED: %s | YELLOW: %s | GREEN: %s (Manual Mode)\n",
                   ledRed ? "ON" : "OFF",
@@ -248,20 +265,26 @@ void publishSensorData() {
   humidity    = simHum;
 #endif
 
-  // Format payload matching SensorDataDto schema
+// Format payload matching SensorDataDto schema
   StaticJsonDocument<256> doc;
-  doc["gardenId"]    = GARDEN_ID;
-  doc["id"]          = GARDEN_ID;
-  doc["packet_no"]   = packetNo++;
-  doc["temperature"] = round(temperature * 10.0f) / 10.0f;
-  doc["humidity"]    = round(humidity * 10.0f) / 10.0f;
+  doc["gardenId"]  = GARDEN_ID;
+  doc["id"]        = GARDEN_ID;
+  doc["packet_no"] = packetNo++;
+
+  // Keep persistent buffers for serialized() to prevent dangling pointer 0.0 values
+  char strTemp[8], strHum[8];
+  dtostrf(temperature, 1, 1, strTemp);
+  dtostrf(humidity, 1, 1, strHum);
+
+  doc["temperature"] = serialized(strTemp);
+  doc["humidity"]    = serialized(strHum);
 
   char buffer[256];
   serializeJson(doc, buffer);
 
-  if (mqtt.publish(TOPIC_SENSOR, buffer)) {
-    Serial.printf("[SENSOR] Published -> Temp: %.1f°C | Hum: %.1f%% | Packet #%u\n",
-                  doc["temperature"].as<float>(), doc["humidity"].as<float>(), packetNo - 1);
+if (mqtt.publish(TOPIC_SENSOR, buffer)) {
+    Serial.printf("[SENSOR] Published -> Temp: %.1f °C | Hum: %.1f%% | Packet #%u\n",
+                  temperature, humidity, packetNo - 1);
   } else {
     Serial.println("[SENSOR] Telemetry publish failed!");
   }
